@@ -1,0 +1,82 @@
+networks:
+  mongo-net:
+    driver: bridge
+
+services:
+  mongo-primary:
+    image: mongo-custom
+    hostname: mongo-primary
+    build:
+      context: .
+      dockerfile: mongo.dockerfile
+    container_name: mongo-primary
+    ports:
+      - "27017:27017"
+    command: mongod --replSet "rs0" --bind_ip_all --keyFile /opt/keyfile/mongo-keyfile
+    environment:
+      - MONGO_INITDB_REPLICASET=rs0
+      - MONGO_INITDB_ROOT_USERNAME=mongo
+      - MONGO_INITDB_ROOT_PASSWORD=mongo
+    networks:
+      - mongo-net
+    volumes:
+      - ./docker-data/mongo-primary:/data/db
+    depends_on:
+      - mongo-secondary-1
+      - mongo-secondary-2  
+    
+  mongo-secondary-1:
+    image: mongo-custom
+    build:
+      context: .
+      dockerfile: mongo.dockerfile
+    container_name: mongo-secondary-1
+    ports:
+      - "27018:27017"
+    command: mongod --replSet "rs0" --bind_ip_all --keyFile /opt/keyfile/mongo-keyfile
+    environment:
+      - MONGO_INITDB_REPLICASET=rs0
+      - MONGO_INITDB_ROOT_USERNAME=mongo
+      - MONGO_INITDB_ROOT_PASSWORD=mongo
+    networks:
+      - mongo-net
+    volumes:
+      - ./docker-data/mongo-secondary-1:/data/db
+    
+  mongo-secondary-2:
+    image: mongo-custom
+    build:
+      context: .
+      dockerfile: mongo.dockerfile
+    container_name: mongo-secondary-2
+    ports:
+      - "27019:27017"
+    command: mongod --replSet "rs0" --bind_ip_all --keyFile /opt/keyfile/mongo-keyfile
+    environment:
+      - MONGO_INITDB_REPLICASET=rs0
+      - MONGO_INITDB_ROOT_USERNAME=mongo
+      - MONGO_INITDB_ROOT_PASSWORD=mongo
+    networks:
+      - mongo-net
+    volumes:
+      - ./docker-data/mongo-secondary-2:/data/db
+    
+
+  mongo-setup:
+    image: mongo-setup
+    build:
+      context: .
+      dockerfile: setup.dockerfile
+    networks:
+      - mongo-net
+    depends_on:
+      - mongo-primary
+    environment:
+      - MONGO_USERNAME=mongo
+      - MONGO_PASSWORD=mongo
+      - PRIMARY_HOST=kubernetes.docker.internal
+      - PRIMARY_PORT=27017
+      - SECONDARY_1_HOST=kubernetes.docker.internal
+      - SECONDARY_1_PORT=27018
+      - SECONDARY_2_HOST=kubernetes.docker.internal
+      - SECONDARY_2_PORT=27019
